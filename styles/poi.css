@@ -1,0 +1,374 @@
+/* ============================================================================
+   Tiago's Toolkit: Points of Interest
+   Uma camada de anotação sobre a cena. Tipografia e linhas de 1 px — nunca ícones
+   a brilhar. Tudo o que está aqui obedece a três regras: o mapa manda, o acento
+   aparece em três sítios, e nada demora mais de 400 ms.
+   ========================================================================== */
+
+:root {
+  --poi-acento: #C98B3C;
+  --poi-tinta: #F2F0EA;
+  --poi-papel: #16161B;
+  --poi-fundo: #0E0E10;
+  --poi-cinza: #86847F;
+  --poi-cinza-claro: #B5B3AE;
+  --poi-fio: rgba(242, 240, 234, 0.14);
+  --poi-curva: cubic-bezier(.2, .7, .2, 1);
+  --poi-mono: "Courier New", ui-monospace, monospace;
+  --poi-serif: "Signika", Georgia, serif;
+}
+
+/* ------------------------------------------------------------------ camada */
+#poi-camada {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.poi-marcador {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  color: var(--poi-tinta);
+  pointer-events: none;
+  opacity: 0.58;
+  transition: opacity var(--poi-curva) 110ms;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.85));
+}
+
+.poi-marcador.poi-fora { opacity: 0 !important; pointer-events: none; }
+
+.poi-a-entrar { animation: poi-entrar 220ms var(--poi-curva) both; }
+@keyframes poi-entrar { from { opacity: 0; transform-origin: center; } }
+
+/* retícula -------------------------------------------------------------- */
+.poi-alvo {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: crosshair;
+  display: grid;
+  place-items: center;
+}
+.poi-alvo:focus-visible { outline: 1px solid var(--poi-acento); outline-offset: 2px; }
+
+.poi-reticula { width: 24px; height: 24px; overflow: visible; }
+.poi-reticula .poi-anel,
+.poi-reticula .poi-registo { fill: none; stroke: currentColor; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.poi-reticula .poi-registo { opacity: 0.6; }
+.poi-reticula .poi-nucleo { fill: currentColor; }
+.poi-reticula { transition: transform var(--poi-curva) 110ms; }
+
+/* rótulo ----------------------------------------------------------------- */
+.poi-etiqueta {
+  position: absolute;
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  transition: opacity var(--poi-curva) 110ms;
+  white-space: nowrap;
+}
+.poi-diagonal {
+  display: block;
+  width: 26px;
+  height: 1px;
+  background: currentColor;
+  transform: rotate(-45deg);
+  transform-origin: left center;
+  flex: none;
+}
+.poi-bloco { margin-bottom: 18px; margin-left: -8px; border-bottom: 1px solid currentColor; padding: 0 3px 3px; }
+.poi-texto { display: flex; align-items: baseline; gap: 8px; line-height: 1; }
+.poi-indice { font-family: var(--poi-mono); font-size: 11px; letter-spacing: 0.14em; color: var(--poi-acento); }
+.poi-nome { font-size: 11px; font-weight: 700; letter-spacing: 0.17em; }
+.poi-meta { font-family: var(--poi-mono); font-size: 9.5px; letter-spacing: 0.1em; color: var(--poi-cinza); margin-top: 4px; }
+
+/* lados: o rótulo vira-se para onde há espaço */
+.poi-marcador[data-lado="esquerda"] .poi-etiqueta { left: 8px; }
+.poi-marcador[data-lado="direita"] .poi-etiqueta { right: 8px; flex-direction: row-reverse; }
+.poi-marcador[data-lado="direita"] .poi-diagonal { transform: rotate(45deg); transform-origin: right center; }
+.poi-marcador[data-lado="direita"] .poi-bloco { margin-left: 0; margin-right: -8px; text-align: right; }
+.poi-marcador[data-lado="direita"] .poi-texto { flex-direction: row-reverse; }
+.poi-marcador[data-vertical="cima"] .poi-etiqueta { bottom: 8px; }
+.poi-marcador[data-vertical="baixo"] .poi-etiqueta { top: 8px; align-items: flex-start; }
+.poi-marcador[data-vertical="baixo"][data-lado="esquerda"] .poi-diagonal { transform: rotate(45deg); }
+.poi-marcador[data-vertical="baixo"][data-lado="direita"] .poi-diagonal { transform: rotate(-45deg); }
+.poi-marcador[data-vertical="baixo"] .poi-bloco { margin-bottom: 0; margin-top: 18px; border-bottom: none; border-top: 1px solid currentColor; padding: 3px 3px 0; }
+
+/* estados ---------------------------------------------------------------- */
+.poi-marcador:hover,
+.poi-marcador.poi-selecionado,
+.poi-marcador.poi-realce,
+body.poi-rotulos-sempre .poi-marcador { opacity: 1; }
+
+.poi-marcador:hover .poi-etiqueta,
+.poi-marcador.poi-selecionado .poi-etiqueta,
+.poi-marcador.poi-realce .poi-etiqueta,
+body.poi-rotulos-sempre .poi-marcador .poi-etiqueta { opacity: 1; }
+
+.poi-marcador:hover .poi-reticula { transform: scale(1.28); }
+
+.poi-marcador[data-estado="anotado"] .poi-bloco::after {
+  content: "";
+  display: block;
+  width: 60%;
+  height: 1px;
+  background: var(--poi-acento);
+  margin-top: 5px;
+}
+
+.poi-marcador[data-estado="esgotado"] { opacity: 0.3; }
+.poi-marcador[data-estado="esgotado"] .poi-nucleo { r: 3.4; }
+.poi-marcador[data-estado="esgotado"] .poi-registo { display: none; }
+
+.poi-marcador[data-estado="fantasma"] { opacity: 0.4; }
+.poi-marcador[data-estado="fantasma"] .poi-anel { stroke-dasharray: 2 3; }
+.poi-marcador[data-estado="fantasma"] .poi-bloco { border-bottom-style: dashed; }
+
+.poi-marcador.poi-selecionado { color: var(--poi-acento); opacity: 1; }
+.poi-marcador.poi-selecionado .poi-nucleo { r: 3; }
+.poi-marcador.poi-selecionado .poi-nome { color: var(--poi-tinta); }
+
+.poi-marcador.poi-a-revelar .poi-reticula { animation: poi-pulsar 400ms var(--poi-curva) 2; }
+@keyframes poi-pulsar { 50% { transform: scale(1.16); } }
+
+.poi-marcador.poi-a-arrastar { opacity: 1; cursor: grabbing; }
+
+/* barra de ações do mestre ------------------------------------------------ */
+.poi-barra {
+  position: absolute;
+  left: 20px;
+  top: 14px;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 5px;
+  background: rgba(14, 14, 17, 0.94);
+  border: 1px solid var(--poi-fio);
+  pointer-events: auto;
+}
+.poi-marcador[data-mestre="1"]:hover .poi-barra,
+.poi-marcador[data-mestre="1"].poi-selecionado .poi-barra { display: flex; }
+.poi-acao {
+  width: 28px; height: 24px;
+  display: grid; place-items: center;
+  background: none; border: none; cursor: pointer; padding: 0;
+  color: var(--poi-tinta);
+}
+.poi-acao:hover { color: var(--poi-acento); }
+.poi-acao svg { width: 14px; height: 14px; }
+.poi-acao svg path, .poi-acao svg circle { stroke: currentColor; stroke-width: 1.2; fill: none; }
+.poi-acao svg .poi-cheio { fill: currentColor; stroke: none; }
+
+/* folha de colocação ------------------------------------------------------ */
+#poi-capturador { position: fixed; inset: 0; z-index: 2; cursor: crosshair; }
+body.poi-a-colocar #poi-camada { opacity: 1; }
+
+/* ------------------------------------------------------------------ cartão */
+#poi-cartao, #poi-editor, #poi-ficha {
+  position: fixed;
+  top: 0; left: 0;
+  width: 330px;
+  box-sizing: border-box;
+  background: var(--poi-papel);
+  border: 1px solid var(--poi-fio);
+  color: var(--poi-tinta);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  font-family: var(--font-primary, sans-serif);
+  opacity: 0;
+  transform-origin: left center;
+  transition: opacity 180ms var(--poi-curva), transform 180ms var(--poi-curva);
+  z-index: 3;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  backdrop-filter: none;
+}
+#poi-cartao.poi-visivel, #poi-editor.poi-visivel, #poi-ficha.poi-visivel { opacity: 1; }
+
+#poi-fio { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 140ms var(--poi-curva); z-index: 2; }
+#poi-fio line { stroke: var(--poi-acento); stroke-width: 1; stroke-dasharray: 1 3; }
+
+.poi-traco { width: 30px; height: 1px; background: var(--poi-acento); flex: none; }
+
+.poi-cabecalho { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.poi-titulo { display: flex; align-items: baseline; gap: 11px; min-width: 0; }
+#poi-cartao .poi-indice, #poi-editor .poi-indice { font-family: var(--poi-mono); font-size: 11px; letter-spacing: 0.14em; color: var(--poi-acento); }
+#poi-cartao .poi-nome { font-size: 15px; font-weight: 600; letter-spacing: 0.08em; }
+.poi-hora { font-family: var(--poi-mono); font-size: 9px; letter-spacing: 0.14em; color: var(--poi-cinza); }
+
+.poi-descricao { margin: 0; font-family: var(--poi-serif); font-size: 14px; line-height: 1.55; color: var(--poi-cinza-claro); }
+
+.poi-caminhos { display: flex; flex-direction: column; }
+.poi-caminho {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 10px 0; border-top: 1px solid rgba(242, 240, 234, 0.1);
+}
+.poi-caminhos .poi-caminho:last-child { border-bottom: 1px solid rgba(242, 240, 234, 0.1); }
+.poi-caminho-texto { font-size: 13px; font-weight: 500; }
+.poi-pericia { font-family: var(--poi-mono); font-size: 9px; letter-spacing: 0.12em; color: var(--poi-cinza); flex: none; }
+
+.poi-evidencias { display: flex; flex-direction: column; gap: 10px; }
+.poi-evidencia { border-left: 1px solid var(--poi-acento); padding-left: 12px; display: flex; flex-direction: column; gap: 4px; }
+.poi-evidencia.poi-por-revelar { border-left-color: var(--poi-cinza); opacity: 0.55; }
+.poi-ev-cabeca { display: flex; align-items: baseline; gap: 8px; }
+.poi-ev-numero { font-family: var(--poi-mono); font-size: 9px; letter-spacing: 0.16em; color: var(--poi-acento); }
+.poi-ev-privada { font-family: var(--poi-mono); font-size: 8.5px; letter-spacing: 0.1em; color: #6BA8C6; border: 1px solid rgba(107, 168, 198, 0.45); padding: 1px 5px; }
+.poi-ev-titulo { font-size: 13px; font-weight: 600; }
+.poi-ev-texto { font-family: var(--poi-serif); font-size: 13px; line-height: 1.5; color: var(--poi-cinza-claro); }
+
+.poi-rodape { display: flex; justify-content: flex-end; padding-top: 4px; border-top: 1px solid rgba(242, 240, 234, 0.1); }
+.poi-ligacao {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-family: var(--poi-mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--poi-cinza); width: auto;
+}
+.poi-ligacao:hover { color: var(--poi-acento); }
+
+/* ------------------------------------------------------------------ editor */
+#poi-editor { width: 360px; max-height: 76vh; overflow-y: auto; }
+.poi-campo-nome, .poi-campo-descricao, #poi-editor input[type="text"], #poi-editor textarea, #poi-editor select {
+  background: rgba(242, 240, 234, 0.05);
+  border: 1px solid var(--poi-fio);
+  color: var(--poi-tinta);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+#poi-editor textarea { font-family: var(--poi-serif); line-height: 1.5; resize: vertical; }
+.poi-campo-nome { font-size: 14px; font-weight: 600; letter-spacing: 0.06em; }
+.poi-fechar, .poi-remover {
+  background: none; border: none; cursor: pointer; padding: 0;
+  width: 22px; height: 22px; display: grid; place-items: center; color: var(--poi-cinza); flex: none;
+}
+.poi-fechar:hover, .poi-remover:hover { color: var(--poi-acento); }
+.poi-fechar svg, .poi-remover svg { width: 12px; height: 12px; }
+.poi-fechar svg path, .poi-remover svg path { stroke: currentColor; stroke-width: 1.4; fill: none; }
+
+.poi-seccao { display: flex; flex-direction: column; gap: 7px; padding-top: 11px; border-top: 1px solid rgba(242, 240, 234, 0.1); }
+.poi-seccao-titulo { font-family: var(--poi-mono); font-size: 9px; letter-spacing: 0.18em; color: var(--poi-acento); text-transform: uppercase; }
+.poi-linha-editor { display: flex; align-items: center; gap: 6px; }
+.poi-campo-pericia { max-width: 110px; }
+.poi-evidencia-editor { display: flex; flex-direction: column; gap: 5px; padding-left: 10px; border-left: 1px solid var(--poi-cinza); }
+.poi-evidencia-editor.poi-revelada { border-left-color: var(--poi-acento); }
+.poi-evidencia-editor .poi-ev-numero { flex: none; }
+.poi-marca { position: relative; width: 22px; height: 22px; display: grid; place-items: center; flex: none; cursor: pointer; }
+.poi-marca input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.poi-marca span { font-family: var(--poi-mono); font-size: 13px; color: var(--poi-cinza); }
+.poi-marca input:checked + span { color: var(--poi-acento); }
+.poi-adicionar {
+  align-self: flex-start; background: none; border: none; cursor: pointer; padding: 2px 0;
+  font-family: var(--poi-mono); font-size: 9.5px; letter-spacing: 0.14em; color: var(--poi-cinza); width: auto; text-transform: uppercase;
+}
+.poi-adicionar:hover { color: var(--poi-acento); }
+
+.poi-avancado { border-top: 1px solid rgba(242, 240, 234, 0.1); padding-top: 10px; }
+.poi-avancado summary {
+  font-family: var(--poi-mono); font-size: 9px; letter-spacing: 0.18em; color: var(--poi-cinza);
+  cursor: pointer; text-transform: uppercase; list-style: none;
+}
+.poi-avancado summary::-webkit-details-marker { display: none; }
+.poi-avancado summary:hover { color: var(--poi-acento); }
+.poi-campo-linha { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 9px; font-size: 12.5px; }
+.poi-campo-linha.poi-campo-coluna { flex-direction: column; align-items: flex-start; }
+.poi-campo-linha select { max-width: 160px; }
+.poi-jogadores { display: flex; flex-direction: column; gap: 4px; font-size: 12px; width: 100%; }
+.poi-jogadores label { display: flex; align-items: center; gap: 7px; }
+.poi-apagar {
+  margin-top: 12px; background: none; border: 1px solid rgba(177, 22, 26, 0.5); color: #C26B6E;
+  font-family: var(--poi-mono); font-size: 9.5px; letter-spacing: 0.14em; padding: 5px 10px; cursor: pointer; text-transform: uppercase;
+}
+.poi-apagar:hover { background: rgba(177, 22, 26, 0.14); }
+
+/* ------------------------------------------------------------------ ficha */
+#poi-ficha { z-index: 4; border-color: rgba(242, 240, 234, 0.2); }
+#poi-ficha.poi-importante { border-color: var(--poi-acento); }
+.poi-ficha-origem { font-family: var(--poi-mono); font-size: 9px; letter-spacing: 0.14em; color: var(--poi-cinza); padding-top: 6px; border-top: 1px solid rgba(242, 240, 234, 0.1); }
+
+/* ------------------------------------------------------------------ dossiê */
+#poi-dossie-tab {
+  position: fixed; left: 20px; bottom: 20px; z-index: 3;
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(14, 14, 17, 0.9); border: 1px solid var(--poi-fio); color: var(--poi-tinta);
+  padding: 8px 14px; cursor: pointer; width: auto;
+  font-family: var(--poi-mono); font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase;
+}
+#poi-dossie-tab:hover, #poi-dossie-tab.poi-ativo { border-color: var(--poi-acento); }
+#poi-dossie-tab svg { width: 12px; height: 12px; }
+#poi-dossie-tab svg path { stroke: var(--poi-acento); stroke-width: 1.4; fill: none; }
+.poi-dossie-nome { color: inherit; }
+.poi-dossie-conta { color: var(--poi-cinza); }
+
+#poi-dossie {
+  position: fixed; left: 20px; bottom: 62px; width: 320px; max-height: 60vh; overflow-y: auto; z-index: 3;
+  background: var(--poi-papel); border: 1px solid var(--poi-fio); color: var(--poi-tinta);
+  opacity: 0; transform: translateY(6px); transition: opacity 160ms var(--poi-curva), transform 160ms var(--poi-curva);
+}
+#poi-dossie.poi-visivel { opacity: 1; transform: translateY(0); }
+.poi-dossie-cabecalho { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--poi-fio); }
+.poi-dossie-titulo { font-family: var(--poi-mono); font-size: 9.5px; letter-spacing: 0.2em; color: var(--poi-acento); text-transform: uppercase; }
+.poi-dossie-meta { font-family: var(--poi-mono); font-size: 9px; letter-spacing: 0.12em; color: var(--poi-cinza); }
+.poi-ficha {
+  display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left;
+  padding: 11px 16px; background: none; border: none; border-bottom: 1px solid rgba(242, 240, 234, 0.07);
+  cursor: pointer; color: var(--poi-tinta);
+}
+.poi-ficha:hover { background: rgba(242, 240, 234, 0.04); }
+.poi-ficha.poi-importante { border-left: 1px solid var(--poi-acento); }
+.poi-ficha-linha { display: flex; align-items: baseline; gap: 10px; }
+.poi-ficha-titulo { font-size: 12.5px; font-weight: 500; flex-grow: 1; }
+.poi-ficha-origem { display: flex; align-items: center; gap: 7px; font-family: var(--poi-mono); font-size: 9px; letter-spacing: 0.1em; color: var(--poi-cinza); padding-left: 28px; border: none; }
+.poi-dossie-vazio { padding: 18px 16px; font-family: var(--poi-serif); font-size: 13px; color: var(--poi-cinza); }
+
+/* ------------------------------------------------------- modo investigação */
+#poi-ardosia { position: fixed; left: 24px; top: 20px; z-index: 3; display: flex; flex-direction: column; gap: 7px; pointer-events: none; }
+.poi-ardosia-topo { display: flex; align-items: center; gap: 11px; }
+.poi-ardosia-traco { width: 22px; height: 1px; background: var(--poi-acento); }
+.poi-ardosia-rotulo { font-family: var(--poi-mono); font-size: 9.5px; letter-spacing: 0.24em; color: var(--poi-acento); text-transform: uppercase; }
+.poi-ardosia-linha { font-family: var(--poi-mono); font-size: 10.5px; letter-spacing: 0.14em; color: var(--poi-cinza); }
+
+/* a interface do Foundry desce de volume e volta assim que o rato lá chega */
+body.poi-modo #ui-left,
+body.poi-modo #ui-top,
+body.poi-modo #ui-bottom,
+body.poi-modo #ui-right,
+body.poi-modo #players,
+body.poi-modo #hotbar {
+  opacity: 0.55;
+  filter: saturate(0.7);
+  transition: opacity 300ms var(--poi-curva), filter 300ms var(--poi-curva);
+}
+body.poi-modo #ui-left:hover,
+body.poi-modo #ui-top:hover,
+body.poi-modo #ui-bottom:hover,
+body.poi-modo #ui-right:hover,
+body.poi-modo #players:hover,
+body.poi-modo #hotbar:hover { opacity: 1; filter: none; }
+
+body.poi-modo::after {
+  content: "";
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  box-shadow: inset 0 0 220px 40px rgba(0, 0, 0, 0.55);
+}
+
+/* descoberta importante: o resto do mundo cala-se por um instante */
+body.poi-foco #poi-camada { opacity: 0.5; transition: opacity 400ms var(--poi-curva); }
+body.poi-foco #poi-ficha { opacity: 1; }
+
+/* quem pediu menos movimento recebe as mesmas mudanças, sem transição */
+@media (prefers-reduced-motion: reduce) {
+  .poi-marcador, .poi-etiqueta, .poi-reticula, #poi-cartao, #poi-editor, #poi-ficha, #poi-dossie { transition: none !important; animation: none !important; }
+}

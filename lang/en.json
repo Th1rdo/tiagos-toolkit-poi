@@ -1,0 +1,58 @@
+{
+  "POI.Investigacao": "Investigation",
+  "POI.Dossie": "Case file",
+  "POI.Ficha": "entry",
+  "POI.Fichas": "entries",
+  "POI.DossieVazio": "Nothing has been recorded in this scene yet.",
+  "POI.SemTitulo": "Untitled",
+  "POI.PontoSemNome": "this point",
+  "POI.Evidencia": "Evidence {n}",
+  "POI.SoPara": "for you only",
+
+  "POI.Ferramentas.Modo": "Investigation Mode",
+  "POI.Ferramentas.Adicionar": "Place points of interest",
+  "POI.Ferramentas.Dossie": "Open the case file",
+
+  "POI.Acoes.RevelarPonto": "Reveal or hide the point",
+  "POI.Acoes.RevelarPista": "Reveal the next piece of evidence",
+  "POI.Acoes.Esgotar": "Mark as exhausted",
+  "POI.Acoes.Editar": "Edit",
+  "POI.Acoes.Revelar": "Reveal",
+  "POI.Acoes.Esconder": "Hide",
+  "POI.Acoes.Remover": "Remove",
+  "POI.Acoes.Apagar": "Delete the point",
+  "POI.Acoes.Fechar": "Close",
+
+  "POI.Campos.Nome": "Point name",
+  "POI.Campos.Descricao": "What can be seen from here.",
+  "POI.Campos.Caminhos": "Possible approaches",
+  "POI.Campos.Caminho": "approach",
+  "POI.Campos.CaminhoTexto": "Examine the wounds",
+  "POI.Campos.Pericia": "Skill",
+  "POI.Campos.Evidencias": "Evidence",
+  "POI.Campos.Evidencia": "evidence",
+  "POI.Campos.EvidenciaTitulo": "Short title",
+  "POI.Campos.EvidenciaTexto": "What the table comes to know.",
+  "POI.Campos.Importante": "Mark as a major discovery",
+  "POI.Campos.Avancado": "Advanced",
+  "POI.Campos.Ajuda": "Guidance",
+  "POI.Campos.Esgotado": "Exhausted",
+  "POI.Campos.QuemVe": "Who sees this point",
+  "POI.Campos.Todos": "Everyone",
+
+  "POI.Ajuda.Livre": "Freeform — the object only",
+  "POI.Ajuda.Guiado": "Guided — possible approaches",
+  "POI.Ajuda.Explicito": "Explicit — with the skill",
+
+  "POI.Avisos.SoMestre": "Only the GM can change points of interest.",
+  "POI.Avisos.SemPistas": "This point has no more evidence to reveal.",
+  "POI.Avisos.ConfirmarApagar": "Delete {nome}? Its evidence goes with it.",
+
+  "POI.Config.Acento": "Accent colour",
+  "POI.Config.AcentoHint": "The colour of index numbers, card rules and the selected state. It is the module's only colour.",
+  "POI.Config.RotulosSempre": "Always show names",
+  "POI.Config.RotulosSempreHint": "By default the name appears on hover, so the scene can breathe. Turn on to keep every name visible.",
+
+  "POI.Atalho.Modo": "Toggle Investigation Mode",
+  "POI.Atalho.Dossie": "Open or close the case file"
+}
