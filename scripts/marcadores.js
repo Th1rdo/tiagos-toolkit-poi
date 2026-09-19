@@ -141,6 +141,13 @@ class CamadaDeMarcadores {
       this.selecionar(this.#selecionado === p.id ? null : p.id);
     });
     alvo.addEventListener("pointerdown", (ev) => this.#comecarArrasto(ev, p.id));
+    // botão direito abre logo o editor: é o caminho mais curto do mapa até ao texto
+    alvo.addEventListener("contextmenu", (ev) => {
+      if (!game.user.isGM) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      Hooks.callAll(`${MODULE_ID}.editar`, p.id);
+    });
     barra.addEventListener("click", (ev) => this.#accaoRapida(ev, p.id));
 
     return el;
@@ -189,6 +196,11 @@ class CamadaDeMarcadores {
   }
 
   // ---------------------------------------------------------------- seleção
+
+  /** O ponto em edição mantém rótulo e barra à vista, mesmo sem o rato por cima. */
+  marcarEdicao(id) {
+    for (const [outro, el] of this.#elementos) el.classList.toggle("poi-em-edicao", outro === id);
+  }
 
   selecionar(id) {
     if (this.#selecionado === id) return;
@@ -280,6 +292,16 @@ class CamadaDeMarcadores {
       if (ev.button !== 0) return;
       ev.preventDefault();
       ev.stopPropagation();
+      // um clique em cima de um marcador é para esse marcador, não para criar
+      // outro por cima: a folha sai da frente por um instante e devolve o clique
+      folha.style.pointerEvents = "none";
+      const porBaixo = document.elementFromPoint(ev.clientX, ev.clientY);
+      folha.style.pointerEvents = "";
+      const marcador = porBaixo?.closest?.(".poi-marcador, .poi-barra");
+      if (marcador) {
+        porBaixo.closest("button")?.click();
+        return;
+      }
       const alvo = canvas.stage.worldTransform.applyInverse({ x: ev.clientX, y: ev.clientY });
       this.#aoColocar(alvo);
     });

@@ -147,10 +147,15 @@ Hooks.once("ready", () => {
   // clicar fora fecha o cartão; o mapa volta a ser o assunto
   document.addEventListener("pointerdown", (ev) => {
     if (ev.target.closest("#poi-cartao, #poi-editor, .poi-marcador, #poi-dossie, #poi-dossie-tab")) return;
+    if (editor.aberto) { editor.fechar(); marcadores.marcarEdicao(null); }
     if (marcadores.selecionado) marcadores.selecionar(null);
   });
 
-  Hooks.on(`${MODULE_ID}.editar`, (id) => editor.abrir(id));
+  Hooks.on(`${MODULE_ID}.editar`, (id) => {
+    cartao.fechar();               // editor e cartão abrem no mesmo sítio: um de cada vez
+    marcadores.marcarEdicao(id);
+    editor.abrir(id);
+  });
 
   aoMudar(() => redesenhar());
   game.socket.on(SOCKET, (msg) => {
@@ -163,7 +168,7 @@ Hooks.once("ready", () => {
   /** API pública: dá jeito em macros e no ecrã de preparação. */
   game.poi = {
     criar: (x, y, nome) => criarPonto({ x, y, nome }),
-    editar: (id) => editor.abrir(id),
+    editar: (id) => Hooks.callAll(`${MODULE_ID}.editar`, id),
     modo: () => alternarModo(),
     dossie: () => dossie.alternar(),
     irPara: (id) => irParaOPonto(id),

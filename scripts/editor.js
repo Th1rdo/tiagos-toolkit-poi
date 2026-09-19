@@ -53,6 +53,7 @@ class Editor {
 
   fechar() {
     this.#id = null;
+    marcadores.marcarEdicao(null);
     if (this.#el) { this.#el.hidden = true; this.#el.classList.remove("poi-visivel"); }
   }
 
