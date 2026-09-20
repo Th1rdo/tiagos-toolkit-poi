@@ -20,6 +20,9 @@ export const CORES = {
 /** Tamanho do marcador: multiplicador sobre 24 px. */
 export const TAMANHO = { min: 0.6, max: 2.6, passo: 0.1, padrao: 1 };
 
+/** Quanto se vê do marcador em repouso. Com o rato por cima vai sempre a 100%. */
+export const OPACIDADE = { min: 0.15, max: 1, passo: 0.05, padrao: 0.62 };
+
 export const log = (...args) => console.log(`${MODULE_ID} |`, ...args);
 export const warn = (...args) => console.warn(`${MODULE_ID} |`, ...args);
 

@@ -1,35 +1,29 @@
 {
   "POI.PontoSemNome": "this point",
-
   "POI.Ferramentas.Colocar": "Place points of interest",
   "POI.Atalho.Colocar": "Toggle point placement",
-
   "POI.Acoes.Esconder": "Hide from players",
   "POI.Acoes.Mostrar": "Show to players",
   "POI.Acoes.Apagar": "Delete",
-
   "POI.Campos.Nome": "Point name",
   "POI.Campos.Descricao": "What can be seen from here.",
   "POI.Campos.Forma": "Marker shape",
   "POI.Campos.Cor": "Marker colour",
   "POI.Campos.Tamanho": "Size",
-
+  "POI.Campos.Opacidade": "Opacity",
   "POI.Formas.reticula": "Reticle",
   "POI.Formas.anel": "Ring",
   "POI.Formas.losango": "Diamond",
   "POI.Formas.cruz": "Cross",
   "POI.Formas.quadrado": "Square",
-
   "POI.Cores.acento": "World colour",
   "POI.Cores.osso": "Bone",
   "POI.Cores.sangue": "Blood",
   "POI.Cores.gelo": "Ice",
   "POI.Cores.limo": "Moss",
   "POI.Cores.violeta": "Violet",
-
   "POI.Avisos.SoMestre": "Only the GM can change points of interest.",
   "POI.Avisos.ConfirmarApagar": "Delete {nome}?",
-
   "POI.Config.Acento": "Accent colour",
   "POI.Config.AcentoHint": "The colour of index numbers and of markers that follow the world colour.",
   "POI.Config.RotulosSempre": "Always show names",

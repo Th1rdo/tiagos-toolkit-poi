@@ -44,6 +44,7 @@ No mesmo cartão escolhes o **aspeto do marcador**:
 - **forma** — retícula, anel, losango, cruz, quadrado
 - **cor** — a do mundo, ou osso, sangue, gelo, limo, violeta
 - **tamanho** — um cursor, com o marcador a mudar à vista
+- **opacidade** — quanto se vê do marcador em repouso; com o rato por cima vai sempre a 100%
 
 O olho no canto esconde o ponto dos jogadores (fica a tracejado, só para ti). Apagar está no fundo.
 Botão direito num marcador abre o cartão diretamente.
@@ -69,8 +70,12 @@ game.poi.pontos();         // a lista da cena atual
 ## Desenvolvimento
 
 ```bash
-npm test      # lógica pura + verificação de integridade
+npm test          # lógica pura + verificação de integridade
+npm run test:dom  # bancada de browser (precisa de Chrome): posicionamento, cor, opacidade, arrastar
 ```
+
+A bancada monta um `stage` falso com a **matriz do PIXI desatualizada de propósito** — a armadilha que
+fazia os pontos fugirem do sítio ao dar zoom — e verifica que o módulo a ignora.
 
 A verificação recusa caminhos partidos, imports inexistentes, chaves de tradução em falta (incluindo as
 que são montadas em tempo de execução) e classes de CSS usadas no JS que não existem na folha de estilo.

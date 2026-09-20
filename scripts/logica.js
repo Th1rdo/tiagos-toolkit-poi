@@ -1,4 +1,4 @@
-import { FORMAS, CORES, TAMANHO } from "./const.js";
+import { FORMAS, CORES, TAMANHO, OPACIDADE } from "./const.js";
 
 /**
  * Regras puras — sem `game`, sem DOM, sem canvas. É isto que os testes cobrem.
@@ -43,6 +43,12 @@ export function tamanhoValido(v) {
   return Math.min(TAMANHO.max, Math.max(TAMANHO.min, Math.round(n * 10) / 10));
 }
 
+export function opacidadeValida(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return OPACIDADE.padrao;
+  return Math.min(OPACIDADE.max, Math.max(OPACIDADE.min, Math.round(n * 100) / 100));
+}
+
 export const formaValida = (f) => (FORMAS.includes(f) ? f : FORMAS[0]);
 export const corValida = (c) => (c in CORES ? c : "acento");
 
@@ -51,6 +57,7 @@ export function aparencia(ponto) {
   return {
     forma: formaValida(ponto?.forma),
     cor: corValida(ponto?.cor),
-    tamanho: tamanhoValido(ponto?.tamanho)
+    tamanho: tamanhoValido(ponto?.tamanho),
+    opacidade: opacidadeValida(ponto?.opacidade)
   };
 }

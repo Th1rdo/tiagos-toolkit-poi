@@ -1,35 +1,29 @@
 {
   "POI.PontoSemNome": "este ponto",
-
   "POI.Ferramentas.Colocar": "Colocar pontos de interesse",
   "POI.Atalho.Colocar": "Ligar ou desligar a colocação de pontos",
-
   "POI.Acoes.Esconder": "Esconder dos jogadores",
   "POI.Acoes.Mostrar": "Mostrar aos jogadores",
   "POI.Acoes.Apagar": "Apagar",
-
   "POI.Campos.Nome": "Nome do ponto",
   "POI.Campos.Descricao": "O que se vê daqui.",
   "POI.Campos.Forma": "Forma do marcador",
   "POI.Campos.Cor": "Cor do marcador",
   "POI.Campos.Tamanho": "Tamanho",
-
+  "POI.Campos.Opacidade": "Opacidade",
   "POI.Formas.reticula": "Retícula",
   "POI.Formas.anel": "Anel",
   "POI.Formas.losango": "Losango",
   "POI.Formas.cruz": "Cruz",
   "POI.Formas.quadrado": "Quadrado",
-
   "POI.Cores.acento": "Cor do mundo",
   "POI.Cores.osso": "Osso",
   "POI.Cores.sangue": "Sangue",
   "POI.Cores.gelo": "Gelo",
   "POI.Cores.limo": "Limo",
   "POI.Cores.violeta": "Violeta",
-
   "POI.Avisos.SoMestre": "Só o mestre pode mexer nos pontos de interesse.",
   "POI.Avisos.ConfirmarApagar": "Apagar {nome}?",
-
   "POI.Config.Acento": "Cor de acento",
   "POI.Config.AcentoHint": "A cor dos números e dos marcadores que seguem a cor do mundo.",
   "POI.Config.RotulosSempre": "Mostrar sempre os nomes",

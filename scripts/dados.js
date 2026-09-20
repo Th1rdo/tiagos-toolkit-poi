@@ -1,5 +1,5 @@
-import { MODULE_ID, FLAG, TAMANHO } from "./const.js";
-import { proximoNumero, tamanhoValido, formaValida, corValida } from "./logica.js";
+import { MODULE_ID, FLAG, TAMANHO, OPACIDADE } from "./const.js";
+import { proximoNumero, tamanhoValido, opacidadeValida, formaValida, corValida } from "./logica.js";
 
 /**
  * Onde os pontos vivem: numa flag da **cena**.
@@ -53,7 +53,8 @@ export async function criarPonto({ x, y } = {}) {
     oculto: false,
     forma: "reticula",
     cor: "acento",
-    tamanho: TAMANHO.padrao
+    tamanho: TAMANHO.padrao,
+    opacidade: OPACIDADE.padrao
   };
   await gravar(lista => [...lista, novo], cena);
   return novo;
@@ -63,6 +64,7 @@ export async function criarPonto({ x, y } = {}) {
 export function atualizarPonto(id, patch = {}) {
   const limpo = { ...patch };
   if ("tamanho" in limpo) limpo.tamanho = tamanhoValido(limpo.tamanho);
+  if ("opacidade" in limpo) limpo.opacidade = opacidadeValida(limpo.opacidade);
   if ("forma" in limpo) limpo.forma = formaValida(limpo.forma);
   if ("cor" in limpo) limpo.cor = corValida(limpo.cor);
   return gravar(lista => lista.map(p => (p.id === id ? { ...p, ...limpo } : p)));

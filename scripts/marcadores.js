@@ -7,9 +7,16 @@ import { pontosVisiveis, aparencia, indice, nomeLimpo, ladoDoRotulo } from "./lo
  *
  * HTML por cima do canvas, não PIXI: o módulo vive de linhas de 1 px e de
  * tipografia, e texto desenhado em PIXI nunca fica nítido em todos os zooms.
- * Em troca, cada marcador é reposicionado a cada `canvasPan` — com uma dúzia de
- * pontos é trabalho nenhum, e o marcador fica do mesmo tamanho no ecrã: uma
- * anotação sobre a cena, não um objeto dentro dela.
+ * Em troca, cada marcador é reposicionado quando a vista muda — e o marcador
+ * fica do mesmo tamanho no ecrã: uma anotação sobre a cena, não um objeto dentro
+ * dela.
+ *
+ * A conta do ecrã é feita à mão a partir de `stage.pivot`, `scale` e `position`,
+ * e não com o `worldTransform` do PIXI. A matriz do PIXI só é refrescada quando
+ * o canvas volta a desenhar: lida no momento do pan, é a do frame ANTERIOR. Num
+ * pan isso é um frame de atraso que ninguém vê; num zoom, a conta sai com a
+ * escala errada e o ponto parece fugir do sítio no mapa — era o que acontecia
+ * até à 0.2.1.
  *
  * Interação: passar o rato mostra o nome, clicar abre, arrastar muda de sítio.
  * Não há mais nada para aprender.
@@ -44,6 +51,8 @@ class CamadaDeMarcadores {
   #aoSelecionar = () => {};
   #aoColocar = () => {};
   #arrasto = null;
+  #aVigiar = false;
+  #ultimaVista = null;
 
   montar({ aoSelecionar, aoColocar }) {
     this.#aoSelecionar = aoSelecionar;
@@ -54,8 +63,9 @@ class CamadaDeMarcadores {
     paiUI().appendChild(raiz);
     this.#raiz = raiz;
 
-    Hooks.on("canvasPan", () => this.posicionar());
     globalThis.addEventListener("resize", () => this.posicionar());
+    Hooks.on("canvasReady", () => this.#vigiar());
+    this.#vigiar();
   }
 
   get selecionado() { return this.#selecionado; }
@@ -116,12 +126,13 @@ class CamadaDeMarcadores {
   }
 
   #pintar(el, p, isGM) {
-    const { forma, cor, tamanho } = aparencia(p);
+    const { forma, cor, tamanho, opacidade } = aparencia(p);
     if (el.dataset.forma !== forma) {
       el.dataset.forma = forma;
       el.querySelector(".poi-alvo").replaceChildren(glifo(forma));
     }
     el.style.setProperty("--poi-tam", tamanho);
+    el.style.setProperty("--poi-op", opacidade);
     el.style.setProperty("--poi-cor", CORES[cor] ?? "var(--poi-acento)");
     el.dataset.oculto = p.oculto ? "1" : "0";
     el.dataset.mestre = isGM ? "1" : "0";
@@ -131,10 +142,54 @@ class CamadaDeMarcadores {
     el.querySelector(".poi-alvo").setAttribute("aria-label", `${indice(p.numero)} ${nomeLimpo(p.nome, "")}`);
   }
 
+  // ------------------------------------------------------- vista e coordenadas
+
+  /** Os valores vivos da vista, acabados de ser postos pelo Foundry. */
+  #vista() {
+    const st = canvas?.stage;
+    if (!st) return null;
+    return {
+      ex: st.scale.x, ey: st.scale.y,
+      px: st.pivot.x, py: st.pivot.y,
+      tx: st.position.x, ty: st.position.y
+    };
+  }
+
+  /** Ponto da cena → pixéis do ecrã. */
+  paraEcra({ x, y }) {
+    const v = this.#vista();
+    if (!v) return { x: 0, y: 0 };
+    return { x: (x - v.px) * v.ex + v.tx, y: (y - v.py) * v.ey + v.ty };
+  }
+
+  /** Pixéis do ecrã → ponto da cena. */
+  paraCena({ x, y }) {
+    const v = this.#vista();
+    if (!v) return { x: 0, y: 0 };
+    return { x: (x - v.tx) / v.ex + v.px, y: (y - v.ty) / v.ey + v.py };
+  }
+
+  /**
+   * Um vigia por frame, com comparação barata: enquanto a vista não mexer não
+   * faz nada. Assim os marcadores ficam colados ao mapa mesmo durante os zooms
+   * e as deslocações animadas, que o hook `canvasPan` só reporta no fim.
+   */
+  #vigiar() {
+    if (this.#aVigiar || !canvas?.app?.ticker) return;
+    this.#aVigiar = true;
+    canvas.app.ticker.add(() => {
+      const v = this.#vista();
+      if (!v) return;
+      const chave = `${v.ex}|${v.ey}|${v.px}|${v.py}|${v.tx}|${v.ty}`;
+      if (chave === this.#ultimaVista) return;
+      this.#ultimaVista = chave;
+      this.posicionar();
+    });
+  }
+
   /** Coordenadas de ecrã: o marcador não cresce com o zoom do mapa. */
   posicionar() {
     if (!this.#raiz || !canvas?.ready) return;
-    const t = canvas.stage.worldTransform;
     const largura = globalThis.innerWidth;
     const altura = globalThis.innerHeight;
 
@@ -142,7 +197,7 @@ class CamadaDeMarcadores {
       if (this.#arrasto?.id === id && this.#arrasto.mexeu) continue;   // a ser arrastado: manda o rato
       const p = obterPonto(id);
       if (!p) continue;
-      const { x, y } = t.apply({ x: p.x, y: p.y });
+      const { x, y } = this.paraEcra(p);
       el.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
       el.classList.toggle("poi-fora", x < -120 || y < -120 || x > largura + 120 || y > altura + 120);
       const lado = ladoDoRotulo({ x, y, largura, altura });
@@ -155,7 +210,7 @@ class CamadaDeMarcadores {
   ecraDe(id) {
     const p = obterPonto(id);
     if (!p || !canvas?.ready) return null;
-    return canvas.stage.worldTransform.apply({ x: p.x, y: p.y });
+    return this.paraEcra(p);
   }
 
   // ---------------------------------------------------------------- seleção
@@ -207,7 +262,7 @@ class CamadaDeMarcadores {
       this.#arrasto = null;
       if (!arrasto) return;
       if (!arrasto.mexeu) return this.alternarSelecao(id);
-      const alvo = canvas.stage.worldTransform.applyInverse({
+      const alvo = this.paraCena({
         x: e.clientX + arrasto.desvio.x,
         y: e.clientY + arrasto.desvio.y
       });
@@ -248,7 +303,7 @@ class CamadaDeMarcadores {
       const alvo = porBaixo?.closest?.(".poi-alvo");
       if (alvo) return this.#pegar(ev, alvo.closest(".poi-marcador").dataset.id);
       if (porBaixo?.closest?.("#poi-painel")) return;
-      this.#aoColocar(canvas.stage.worldTransform.applyInverse({ x: ev.clientX, y: ev.clientY }));
+      this.#aoColocar(this.paraCena({ x: ev.clientX, y: ev.clientY }));
     });
     paiUI().appendChild(folha);
     this.#capturador = folha;

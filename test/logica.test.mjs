@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   indice, proximoNumero, nomeLimpo, pontosVisiveis, temTexto,
-  ladoDoRotulo, tamanhoValido, formaValida, corValida, aparencia
+  ladoDoRotulo, tamanhoValido, opacidadeValida, formaValida, corValida, aparencia
 } from "../scripts/logica.js";
 
 const mesa = { id: "p1", numero: 1, nome: "Mesa", descricao: "Papéis espalhados." };
@@ -58,7 +58,16 @@ test("forma e cor desconhecidas caem no padrão", () => {
   assert.equal(corValida("arco-íris"), "acento");
 });
 
+test("opacidade fora da escala é apertada", () => {
+  assert.equal(opacidadeValida(0.4), 0.4);
+  assert.equal(opacidadeValida(3), 1);
+  assert.equal(opacidadeValida(0), 0.15);
+  assert.equal(opacidadeValida("x"), 0.62);
+});
+
 test("aparência resolve tudo de uma vez, mesmo com um ponto antigo sem campos", () => {
-  assert.deepEqual(aparencia({}), { forma: "reticula", cor: "acento", tamanho: 1 });
-  assert.deepEqual(aparencia({ forma: "cruz", cor: "gelo", tamanho: 2 }), { forma: "cruz", cor: "gelo", tamanho: 2 });
+  // um ponto criado na 0.2.0 não tem `opacidade`: tem de continuar a desenhar-se
+  assert.deepEqual(aparencia({}), { forma: "reticula", cor: "acento", tamanho: 1, opacidade: 0.62 });
+  assert.deepEqual(aparencia({ forma: "cruz", cor: "gelo", tamanho: 2, opacidade: 0.3 }),
+                   { forma: "cruz", cor: "gelo", tamanho: 2, opacidade: 0.3 });
 });

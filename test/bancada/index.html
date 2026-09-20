@@ -1,0 +1,127 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>bancada poi</title>
+<style>body { background: #111; color: #ddd; font: 12px ui-monospace, monospace; }</style>
+<pre id="saida"></pre>
+<script type="module">
+// ---------------------------------------------------------------- o mínimo do Foundry
+const tickers = [];
+const flags = { "tiagos-toolkit-poi": { pontos: [] } };
+let redesenhou = 0;
+
+const cena = {
+  id: "c1",
+  getFlag: (m, k) => flags[m]?.[k],
+  async setFlag(m, k, v) { (flags[m] ??= {})[k] = v; redesenhou++; await Promise.resolve(); }
+};
+
+globalThis.Hooks = { on() {}, once() {}, callAll() {}, off() {} };
+globalThis.ui = { notifications: { warn() {}, info() {} }, controls: { render() {} } };
+globalThis.game = {
+  user: { isGM: true, id: "gm" },
+  users: [],
+  i18n: { localize: (k) => k, format: (k) => k },
+  settings: { get: () => "#C98B3C", register() {} },
+  scenes: { current: cena },
+  keybindings: { register() {} }
+};
+globalThis.foundry = {
+  utils: {
+    randomID: () => Math.random().toString(36).slice(2, 18),
+    escapeHTML: (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])),
+    hasProperty: () => true
+  },
+  applications: { api: { DialogV2: { confirm: async () => true } } }
+};
+
+// O stage: pivot/scale/position são o que o Foundry acabou de pôr; `worldTransform`
+// é a matriz do PIXI, que só é refrescada quando o canvas volta a desenhar. Aqui
+// ela fica DE PROPÓSITO desatualizada, que é a armadilha do mundo real.
+const stage = {
+  pivot: { x: 0, y: 0 }, scale: { x: 1, y: 1 }, position: { x: 0, y: 0 },
+  worldTransform: {
+    apply: () => ({ x: -9999, y: -9999 }),
+    applyInverse: () => ({ x: -9999, y: -9999 })
+  }
+};
+function vista({ escala, pivot, posicao }) {
+  stage.scale = { x: escala, y: escala };
+  stage.pivot = { x: pivot[0], y: pivot[1] };
+  stage.position = { x: posicao[0], y: posicao[1] };
+  tickers.forEach(fn => fn());
+}
+globalThis.canvas = { ready: true, scene: cena, stage, app: { ticker: { add: (fn) => tickers.push(fn) } } };
+
+// ---------------------------------------------------------------- testes
+const { marcadores } = await import("../../scripts/marcadores.js");
+const { painel } = await import("../../scripts/painel.js");
+const { criarPonto, pontos, ponto } = await import("../../scripts/dados.js");
+
+const resultados = [];
+const eIgual = (nome, obtido, esperado) =>
+  resultados.push({ nome, ok: JSON.stringify(obtido) === JSON.stringify(esperado), obtido, esperado });
+const eVerdade = (nome, v, nota = "") => resultados.push({ nome, ok: !!v, obtido: v, esperado: true, nota });
+
+marcadores.montar({ aoSelecionar: (id) => painel.mostrar(id), aoColocar: () => {} });
+painel.montar();
+
+vista({ escala: 1, pivot: [0, 0], posicao: [0, 0] });
+const p = await criarPonto({ x: 100, y: 200 });
+marcadores.desenhar();
+
+// 1. a conta do ecrã ignora a matriz velha do PIXI
+eIgual("ecrã com vista neutra", marcadores.paraEcra({ x: 100, y: 200 }), { x: 100, y: 200 });
+
+// 2. zoom: o ponto tem de continuar no mesmo sítio do mapa
+vista({ escala: 2, pivot: [400, 300], posicao: [960, 540] });
+eIgual("ecrã depois de um zoom 2x", marcadores.paraEcra({ x: 400, y: 300 }), { x: 960, y: 540 });
+eIgual("ida e volta ecrã→cena", marcadores.paraCena(marcadores.paraEcra({ x: 137, y: 291 })), { x: 137, y: 291 });
+
+// 3. o marcador no DOM acompanha, sem passar por lado nenhum
+const el = document.querySelector(`.poi-marcador[data-id="${p.id}"]`);
+const esperado = marcadores.paraEcra({ x: p.x, y: p.y });
+// o Chrome normaliza o terceiro valor para "0px": compara-se o que interessa
+const pixeis = (el) => (el.style.transform.match(/-?\d+(?=px)/g) ?? []).slice(0, 2).map(Number);
+eIgual("o marcador seguiu o zoom", pixeis(el), [Math.round(esperado.x), Math.round(esperado.y)]);
+
+// 4. zoom out e zoom in devolvem o ponto ao mesmo sítio
+const antes = { ...marcadores.paraEcra(p) };
+vista({ escala: 0.5, pivot: [400, 300], posicao: [960, 540] });
+vista({ escala: 2, pivot: [400, 300], posicao: [960, 540] });
+eIgual("zoom out e in voltam ao mesmo pixel", marcadores.paraEcra(p), antes);
+
+// 5. cor: clicar numa amostra guarda e pinta
+marcadores.selecionar(p.id);
+await new Promise(r => setTimeout(r, 20));
+const amostra = document.querySelector('#poi-painel [data-accao="cor"][data-valor="sangue"]');
+eVerdade("há amostras de cor no painel", !!amostra);
+amostra.click();
+await new Promise(r => setTimeout(r, 20));
+eIgual("a cor ficou guardada", ponto(p.id).cor, "sangue");
+marcadores.desenhar();
+eIgual("o marcador ficou com a cor", document.querySelector(`.poi-marcador[data-id="${p.id}"]`).style.getPropertyValue("--poi-cor"), "#B1161A");
+
+// 6. opacidade: mexe à vista e guarda
+const cursor = document.querySelector('#poi-painel [data-campo="opacidade"]');
+eVerdade("há um cursor de opacidade", !!cursor);
+cursor.value = "0.3";
+cursor.dispatchEvent(new Event("input", { bubbles: true }));
+eIgual("a opacidade muda à vista", document.querySelector(`.poi-marcador[data-id="${p.id}"]`).style.getPropertyValue("--poi-op"), "0.3");
+await new Promise(r => setTimeout(r, 600));
+eIgual("a opacidade ficou guardada", ponto(p.id).opacidade, 0.3);
+
+// 7. arrastar com zoom: 100 px no ecrã com escala 2 são 50 na cena
+const alvo = document.querySelector(`.poi-marcador[data-id="${p.id}"] .poi-alvo`);
+const inicio = marcadores.paraEcra(ponto(p.id));
+const antesDoArrasto = { x: ponto(p.id).x, y: ponto(p.id).y };
+alvo.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: inicio.x, clientY: inicio.y }));
+globalThis.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: inicio.x + 100, clientY: inicio.y }));
+globalThis.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: inicio.x + 100, clientY: inicio.y }));
+await new Promise(r => setTimeout(r, 40));
+eIgual("arrastar 100 px com zoom 2x move 50 na cena",
+  { dx: ponto(p.id).x - antesDoArrasto.x, dy: ponto(p.id).y - antesDoArrasto.y }, { dx: 50, dy: 0 });
+
+globalThis.__r = resultados;
+document.getElementById("saida").textContent =
+  resultados.map(r => `${r.ok ? "ok  " : "FALHOU"} ${r.nome}${r.ok ? "" : ` → ${JSON.stringify(r.obtido)} (esperado ${JSON.stringify(r.esperado)})`}`).join("\n");
+</script>

@@ -1,4 +1,4 @@
-import { MODULE_ID, FORMAS, CORES, TAMANHO, paiUI } from "./const.js";
+import { MODULE_ID, FORMAS, CORES, TAMANHO, OPACIDADE, paiUI } from "./const.js";
 import { ponto as obterPonto, atualizarPonto, removerPonto, alternarOculto } from "./dados.js";
 import { marcadores } from "./marcadores.js";
 import { indice, nomeLimpo, aparencia } from "./logica.js";
@@ -105,7 +105,7 @@ class Painel {
   }
 
   #deMestre(p) {
-    const { forma, cor, tamanho } = aparencia(p);
+    const { forma, cor, tamanho, opacidade } = aparencia(p);
     return `
       <div class="poi-traco"></div>
       <header class="poi-cabecalho">
@@ -136,12 +136,16 @@ class Painel {
         <div class="poi-cores" role="group" aria-label="${game.i18n.localize("POI.Campos.Cor")}">
           ${Object.keys(CORES).map(c => `
             <button type="button" class="poi-ponto-cor ${c === cor ? "poi-escolhido" : ""}" data-accao="cor" data-valor="${c}"
-                    style="--poi-amostra: ${CORES[c] ?? "var(--poi-acento)"}"
-                    title="${game.i18n.localize(`POI.Cores.${c}`)}" aria-label="${game.i18n.localize(`POI.Cores.${c}`)}"></button>`).join("")}
+                    title="${game.i18n.localize(`POI.Cores.${c}`)}" aria-label="${game.i18n.localize(`POI.Cores.${c}`)}"
+              ><span class="poi-amostra" style="background: ${CORES[c] ?? "var(--poi-acento)"}"></span></button>`).join("")}
         </div>
-        <label class="poi-tamanho">
+        <label class="poi-cursor">
           <span class="poi-etiqueta-campo">${game.i18n.localize("POI.Campos.Tamanho")}</span>
           <input type="range" data-campo="tamanho" min="${TAMANHO.min}" max="${TAMANHO.max}" step="${TAMANHO.passo}" value="${tamanho}">
+        </label>
+        <label class="poi-cursor">
+          <span class="poi-etiqueta-campo">${game.i18n.localize("POI.Campos.Opacidade")}</span>
+          <input type="range" data-campo="opacidade" min="${OPACIDADE.min}" max="${OPACIDADE.max}" step="${OPACIDADE.passo}" value="${opacidade}">
         </label>
       </div>
 
@@ -162,11 +166,11 @@ class Painel {
     const campo = ev.target.dataset.campo;
     if (campo === "nome") return this.#guardar({ nome: ev.target.value });
     if (campo === "descricao") return this.#guardar({ descricao: ev.target.value });
-    if (campo === "tamanho") {
-      // o tamanho mexe-se à vista, sem esperar pela gravação
+    // tamanho e opacidade mexem-se à vista, sem esperar pela gravação
+    if (campo === "tamanho" || campo === "opacidade") {
       const el = document.querySelector(`.poi-marcador[data-id="${this.#id}"]`);
-      el?.style.setProperty("--poi-tam", ev.target.value);
-      return this.#guardar({ tamanho: ev.target.value });
+      el?.style.setProperty(campo === "tamanho" ? "--poi-tam" : "--poi-op", ev.target.value);
+      return this.#guardar({ [campo]: ev.target.value });
     }
   }
 

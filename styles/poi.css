@@ -24,9 +24,10 @@
   top: 0; left: 0;
   width: 0; height: 0;
   --poi-tam: 1;
+  --poi-op: 0.62;
   color: var(--poi-cor, var(--poi-acento));
   pointer-events: none;
-  opacity: 0.62;
+  opacity: var(--poi-op);
   transition: opacity 110ms var(--poi-curva);
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
 }
@@ -167,8 +168,8 @@ body.poi-a-colocar .poi-marcador { opacity: 1; }
 #poi-painel input.poi-nome:hover, #poi-painel textarea.poi-descricao:hover { border-color: var(--poi-fio); }
 #poi-painel input.poi-nome:focus, #poi-painel textarea.poi-descricao:focus { border-color: var(--poi-acento); outline: none; }
 
-.poi-olho { width: 24px; height: 24px; flex: none; display: grid; place-items: center; background: none; border: none; cursor: pointer; padding: 0; color: var(--poi-cinza); }
-.poi-olho:hover { color: var(--poi-acento); }
+#poi-painel .poi-olho { width: 24px; height: 24px; flex: none; display: grid; place-items: center; background: none; border: none; cursor: pointer; padding: 0; color: var(--poi-cinza); }
+#poi-painel .poi-olho:hover { color: var(--poi-acento); }
 .poi-olho svg { width: 15px; height: 15px; }
 .poi-olho svg path, .poi-olho svg circle { stroke: currentColor; stroke-width: 1.2; fill: none; }
 .poi-olho svg .poi-cheio { fill: currentColor; stroke: none; }
@@ -176,12 +177,12 @@ body.poi-a-colocar .poi-marcador { opacity: 1; }
 /* aspeto: forma, cor e tamanho, numa tira só */
 .poi-aspeto { display: flex; flex-direction: column; gap: 10px; padding-top: 11px; border-top: 1px solid rgba(242, 240, 234, 0.1); }
 .poi-formas, .poi-cores { display: flex; align-items: center; gap: 6px; }
-.poi-swatch {
+#poi-painel .poi-swatch {
   width: 28px; height: 28px; display: grid; place-items: center; cursor: pointer;
   background: none; border: 1px solid transparent; color: var(--poi-cinza); padding: 0;
 }
-.poi-swatch:hover { color: var(--poi-tinta); border-color: var(--poi-fio); }
-.poi-swatch.poi-escolhido { color: var(--poi-acento); border-color: var(--poi-acento); }
+#poi-painel .poi-swatch:hover { color: var(--poi-tinta); border-color: var(--poi-fio); }
+#poi-painel .poi-swatch.poi-escolhido { color: var(--poi-acento); border-color: var(--poi-acento); }
 .poi-mini { display: block; width: 13px; height: 13px; position: relative; }
 .poi-mini-reticula, .poi-mini-anel { border: 1px solid currentColor; border-radius: 50%; }
 .poi-mini-reticula::after { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: currentColor; }
@@ -191,26 +192,28 @@ body.poi-a-colocar .poi-marcador { opacity: 1; }
 .poi-mini-cruz::before { left: 6px; top: 0; width: 1px; height: 13px; }
 .poi-mini-cruz::after { top: 6px; left: 0; height: 1px; width: 13px; }
 
-.poi-ponto-cor {
-  width: 20px; height: 20px; border-radius: 50%; cursor: pointer; padding: 0;
-  background: var(--poi-amostra);
-  border: 1px solid rgba(242, 240, 234, 0.25);
+#poi-painel .poi-ponto-cor {
+  width: 22px; height: 22px; border-radius: 50%; cursor: pointer; padding: 0;
+  background: none; border: 1px solid rgba(242, 240, 234, 0.22);
+  display: grid; place-items: center;
 }
-.poi-ponto-cor:hover { transform: scale(1.12); }
-.poi-ponto-cor.poi-escolhido { box-shadow: 0 0 0 2px var(--poi-papel), 0 0 0 3px var(--poi-acento); }
+#poi-painel .poi-amostra { display: block; width: 14px; height: 14px; border-radius: 50%; }
+#poi-painel .poi-ponto-cor:hover { transform: scale(1.12); }
+#poi-painel .poi-ponto-cor.poi-escolhido { box-shadow: 0 0 0 2px var(--poi-papel), 0 0 0 3px var(--poi-acento); }
 
-.poi-tamanho { display: flex; align-items: center; gap: 12px; }
+#poi-painel .poi-cursor { display: flex; align-items: center; gap: 12px; }
 .poi-etiqueta-campo { font-family: var(--poi-mono); font-size: 9px; letter-spacing: 0.16em; color: var(--poi-cinza); text-transform: uppercase; flex: none; }
-.poi-tamanho input[type="range"] { flex-grow: 1; accent-color: var(--poi-acento); }
+#poi-painel .poi-cursor input[type="range"] { flex-grow: 1; accent-color: var(--poi-acento); min-width: 0; }
+#poi-painel .poi-etiqueta-campo { width: 64px; }
 
 .poi-rodape { display: flex; justify-content: flex-end; }
-.poi-ligacao {
+#poi-painel .poi-ligacao {
   background: none; border: none; padding: 0; cursor: pointer; width: auto;
   font-family: var(--poi-mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--poi-cinza);
 }
-.poi-ligacao:hover { color: var(--poi-acento); }
-.poi-apagar:hover { color: #C26B6E; }
+#poi-painel .poi-ligacao:hover { color: var(--poi-acento); }
+#poi-painel .poi-apagar:hover { color: #C26B6E; }
 
 @media (prefers-reduced-motion: reduce) {
   .poi-marcador, .poi-etiqueta, .poi-glifo, #poi-painel, #poi-fio { transition: none !important; }
