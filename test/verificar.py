@@ -30,6 +30,15 @@ en = json.load(open("lang/en.json", encoding="utf-8"))
 usadas = set()
 for src in list(scripts.values()) + [ler("module.json")]:
     usadas |= set(re.findall(r'"(POI\.[A-Za-z][\w.]*[A-Za-z])"', src))
+# chaves montadas em tempo de execução (`POI.Formas.${f}`): a lista vem do const.js,
+# e cada entrada dela tem de ter tradução nos dois idiomas
+const = ler("scripts/const.js")
+formas = re.findall(r'"(\w+)"', re.search(r"FORMAS = \[([^\]]*)\]", const).group(1))
+cores = re.findall(r"^\s{2}(\w+):", re.search(r"CORES = \{(.*?)\};", const, re.S).group(1), re.M)
+usadas |= {f"POI.Formas.{f}" for f in formas} | {f"POI.Cores.{c}" for c in cores}
+if not formas or not cores:
+    falhas.append("não consegui ler FORMAS/CORES do const.js")
+
 for k in sorted(usadas):
     if k not in pt: falhas.append(f"chave {k} ausente em pt-BR")
     if k not in en: falhas.append(f"chave {k} ausente em en")

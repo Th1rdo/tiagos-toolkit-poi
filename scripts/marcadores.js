@@ -1,44 +1,43 @@
-import { MODULE_ID, TEMPO, log, paiUI } from "./const.js";
-import { pontos, ponto as obterPonto, moverPonto, alternarOculto, alternarEsgotado, proximaPorRevelar, revelarEvidencia } from "./dados.js";
-import { pontosVisiveis, estadoDoPonto, indice, resumoDoMestre, ladoDoRotulo, nomeLimpo } from "./logica.js";
+import { MODULE_ID, CORES, paiUI } from "./const.js";
+import { pontos, ponto as obterPonto, moverPonto } from "./dados.js";
+import { pontosVisiveis, aparencia, indice, nomeLimpo, ladoDoRotulo } from "./logica.js";
 
 /**
  * A camada de marcadores.
  *
- * Fica em HTML por cima do canvas, não dentro dele: o módulo vive de tipografia
- * fina e de linhas de 1 px, e texto desenhado em PIXI nunca fica nítido em todos
- * os níveis de zoom. Em troca, cada marcador é reposicionado a cada `canvasPan`
- * — com dez marcadores é trabalho nenhum, e o tamanho no ecrã passa a ser
- * constante, como uma anotação numa fotografia e não como um objeto do mapa.
+ * HTML por cima do canvas, não PIXI: o módulo vive de linhas de 1 px e de
+ * tipografia, e texto desenhado em PIXI nunca fica nítido em todos os zooms.
+ * Em troca, cada marcador é reposicionado a cada `canvasPan` — com uma dúzia de
+ * pontos é trabalho nenhum, e o marcador fica do mesmo tamanho no ecrã: uma
+ * anotação sobre a cena, não um objeto dentro dela.
+ *
+ * Interação: passar o rato mostra o nome, clicar abre, arrastar muda de sítio.
+ * Não há mais nada para aprender.
  */
 
 const svgNS = "http://www.w3.org/2000/svg";
 
-function reticula() {
+/** Cada forma é um desenho só, sem preenchimento, com um ponto no centro exato. */
+const DESENHOS = {
+  reticula: `<circle class="poi-corpo" cx="12" cy="12" r="7"></circle>
+             <path class="poi-registo" d="M12 3.5 L12 0.5 M12 23.5 L12 20.5 M3.5 12 L0.5 12 M23.5 12 L20.5 12"></path>`,
+  anel: `<circle class="poi-corpo" cx="12" cy="12" r="8.5"></circle>`,
+  losango: `<path class="poi-corpo" d="M12 2.5 L21.5 12 L12 21.5 L2.5 12 Z"></path>`,
+  cruz: `<path class="poi-corpo" d="M12 1.5 L12 22.5 M1.5 12 L22.5 12"></path>`,
+  quadrado: `<path class="poi-corpo" d="M4 4 L20 4 L20 20 L4 20 Z"></path>`
+};
+
+function glifo(forma) {
   const svg = document.createElementNS(svgNS, "svg");
   svg.setAttribute("viewBox", "0 0 24 24");
-  svg.classList.add("poi-reticula");
-  svg.innerHTML = `
-    <circle class="poi-anel" cx="12" cy="12" r="7"></circle>
-    <circle class="poi-nucleo" cx="12" cy="12" r="1.6"></circle>
-    <path class="poi-registo" d="M12 3.5 L12 0.5 M12 23.5 L12 20.5 M3.5 12 L0.5 12 M23.5 12 L20.5 12"></path>`;
+  svg.classList.add("poi-glifo");
+  svg.innerHTML = `${DESENHOS[forma] ?? DESENHOS.reticula}<circle class="poi-nucleo" cx="12" cy="12" r="1.7"></circle>`;
   return svg;
-}
-
-function botaoIcone(accao, rotulo, caminho) {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = "poi-acao";
-  b.dataset.accao = accao;
-  b.title = rotulo;
-  b.setAttribute("aria-label", rotulo);
-  b.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true">${caminho}</svg>`;
-  return b;
 }
 
 class CamadaDeMarcadores {
   #raiz = null;
-  #elementos = new Map();      // pontoId → elemento
+  #elementos = new Map();
   #selecionado = null;
   #colocar = false;
   #capturador = null;
@@ -57,37 +56,27 @@ class CamadaDeMarcadores {
 
     Hooks.on("canvasPan", () => this.posicionar());
     globalThis.addEventListener("resize", () => this.posicionar());
-    globalThis.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape" && this.#selecionado) this.selecionar(null);
-    });
   }
 
   get selecionado() { return this.#selecionado; }
+  get aColocar() { return this.#colocar; }
 
   // ---------------------------------------------------------------- desenho
 
-  /** Redesenha do zero. Chamado quando a cena muda de flags — não a cada frame. */
   desenhar() {
     if (!this.#raiz || !canvas?.ready) return;
     const isGM = game.user.isGM;
-    const userId = game.user.id;
-    const visiveis = pontosVisiveis(pontos(), { userId, isGM });
     const vistos = new Set();
-    let entrada = 0;
 
-    for (const p of visiveis) {
+    for (const p of pontosVisiveis(pontos(), { isGM })) {
       vistos.add(p.id);
       let el = this.#elementos.get(p.id);
-      const novo = !el;
-      if (novo) {
+      if (!el) {
         el = this.#criar(p);
         this.#elementos.set(p.id, el);
         this.#raiz.appendChild(el);
-        // entram em escada, pela ordem do índice: lê-se como uma varredura
-        el.style.animationDelay = `${entrada++ * TEMPO.ESCADA}ms`;
-        el.classList.add("poi-a-entrar");
       }
-      this.#pintar(el, p, { isGM, userId });
+      this.#pintar(el, p, isGM);
     }
 
     for (const [id, el] of this.#elementos) {
@@ -108,65 +97,41 @@ class CamadaDeMarcadores {
     const alvo = document.createElement("button");
     alvo.type = "button";
     alvo.className = "poi-alvo";
-    alvo.appendChild(reticula());
     el.appendChild(alvo);
 
     const etiqueta = document.createElement("div");
     etiqueta.className = "poi-etiqueta";
-    etiqueta.innerHTML = `
-      <span class="poi-diagonal"></span>
-      <div class="poi-bloco">
-        <div class="poi-texto"><span class="poi-indice"></span><span class="poi-nome"></span></div>
-        <div class="poi-meta"></div>
-      </div>`;
+    etiqueta.innerHTML = `<span class="poi-diagonal"></span>
+      <div class="poi-bloco"><span class="poi-indice"></span><span class="poi-nome"></span></div>`;
     el.appendChild(etiqueta);
 
-    const barra = document.createElement("div");
-    barra.className = "poi-barra";
-    barra.append(
-      botaoIcone("revelarPonto", game.i18n.localize("POI.Acoes.RevelarPonto"),
-        `<path d="M1 8 C4 3.5 12 3.5 15 8 C12 12.5 4 12.5 1 8 Z" fill="none"></path><circle cx="8" cy="8" r="2.2" class="poi-cheio"></circle>`),
-      botaoIcone("revelarPista", game.i18n.localize("POI.Acoes.RevelarPista"),
-        `<path d="M3 13 L13 3 M9 3 L13 3 L13 7" fill="none"></path>`),
-      botaoIcone("esgotar", game.i18n.localize("POI.Acoes.Esgotar"),
-        `<circle cx="8" cy="8" r="5.5" fill="none"></circle><circle cx="8" cy="8" r="2.6" class="poi-cheio"></circle>`),
-      botaoIcone("editar", game.i18n.localize("POI.Acoes.Editar"),
-        `<path d="M3 13 L3 10.5 L11 2.5 L13.5 5 L5.5 13 Z" fill="none"></path>`)
-    );
-    el.appendChild(barra);
-
-    alvo.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      if (this.#arrasto?.mexeu) return;                 // acabou de ser arrastado: não seleciona
-      this.selecionar(this.#selecionado === p.id ? null : p.id);
-    });
-    alvo.addEventListener("pointerdown", (ev) => this.#comecarArrasto(ev, p.id));
-    // botão direito abre logo o editor: é o caminho mais curto do mapa até ao texto
+    alvo.addEventListener("pointerdown", (ev) => this.#pegar(ev, p.id));
     alvo.addEventListener("contextmenu", (ev) => {
       if (!game.user.isGM) return;
       ev.preventDefault();
       ev.stopPropagation();
-      Hooks.callAll(`${MODULE_ID}.editar`, p.id);
+      this.selecionar(p.id);
     });
-    barra.addEventListener("click", (ev) => this.#accaoRapida(ev, p.id));
-
     return el;
   }
 
-  #pintar(el, p, { isGM, userId }) {
-    const estado = estadoDoPonto(p, { userId, isGM });
-    el.dataset.estado = estado;
+  #pintar(el, p, isGM) {
+    const { forma, cor, tamanho } = aparencia(p);
+    if (el.dataset.forma !== forma) {
+      el.dataset.forma = forma;
+      el.querySelector(".poi-alvo").replaceChildren(glifo(forma));
+    }
+    el.style.setProperty("--poi-tam", tamanho);
+    el.style.setProperty("--poi-cor", CORES[cor] ?? "var(--poi-acento)");
+    el.dataset.oculto = p.oculto ? "1" : "0";
     el.dataset.mestre = isGM ? "1" : "0";
     el.classList.toggle("poi-selecionado", this.#selecionado === p.id);
     el.querySelector(".poi-indice").textContent = indice(p.numero);
     el.querySelector(".poi-nome").textContent = nomeLimpo(p.nome, "—").toUpperCase();
-    const meta = el.querySelector(".poi-meta");
-    meta.textContent = isGM ? resumoDoMestre(p) : "";
-    meta.hidden = !isGM;
     el.querySelector(".poi-alvo").setAttribute("aria-label", `${indice(p.numero)} ${nomeLimpo(p.nome, "")}`);
   }
 
-  /** Cada marcador é colocado em coordenadas de ecrã: não cresce com o zoom. */
+  /** Coordenadas de ecrã: o marcador não cresce com o zoom do mapa. */
   posicionar() {
     if (!this.#raiz || !canvas?.ready) return;
     const t = canvas.stage.worldTransform;
@@ -174,12 +139,12 @@ class CamadaDeMarcadores {
     const altura = globalThis.innerHeight;
 
     for (const [id, el] of this.#elementos) {
+      if (this.#arrasto?.id === id && this.#arrasto.mexeu) continue;   // a ser arrastado: manda o rato
       const p = obterPonto(id);
       if (!p) continue;
       const { x, y } = t.apply({ x: p.x, y: p.y });
       el.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
-      // fora do ecrã não desaparece — encolhe, para o mapa não ficar a piscar ao arrastar
-      el.classList.toggle("poi-fora", x < -80 || y < -80 || x > largura + 80 || y > altura + 80);
+      el.classList.toggle("poi-fora", x < -120 || y < -120 || x > largura + 120 || y > altura + 120);
       const lado = ladoDoRotulo({ x, y, largura, altura });
       el.dataset.lado = lado.dx > 0 ? "esquerda" : "direita";
       el.dataset.vertical = lado.dy > 0 ? "baixo" : "cima";
@@ -187,20 +152,13 @@ class CamadaDeMarcadores {
     Hooks.callAll(`${MODULE_ID}.posicionou`);
   }
 
-  /** Onde está, no ecrã, o ponto — o cartão precisa de saber para se amarrar a ele. */
   ecraDe(id) {
     const p = obterPonto(id);
     if (!p || !canvas?.ready) return null;
-    const { x, y } = canvas.stage.worldTransform.apply({ x: p.x, y: p.y });
-    return { x, y };
+    return canvas.stage.worldTransform.apply({ x: p.x, y: p.y });
   }
 
   // ---------------------------------------------------------------- seleção
-
-  /** O ponto em edição mantém rótulo e barra à vista, mesmo sem o rato por cima. */
-  marcarEdicao(id) {
-    for (const [outro, el] of this.#elementos) el.classList.toggle("poi-em-edicao", outro === id);
-  }
 
   selecionar(id) {
     if (this.#selecionado === id) return;
@@ -209,73 +167,65 @@ class CamadaDeMarcadores {
     this.#aoSelecionar(id);
   }
 
-  // ---------------------------------------------------------------- arrastar (mestre)
+  alternarSelecao(id) { this.selecionar(this.#selecionado === id ? null : id); }
 
-  #comecarArrasto(ev, id) {
-    if (!game.user.isGM || ev.button !== 0) return;
-    const inicio = { x: ev.clientX, y: ev.clientY };
-    this.#arrasto = { id, inicio, mexeu: false };
+  // ---------------------------------------------------------------- pegar e largar
+
+  /**
+   * Um gesto só: carregar e largar abre; carregar e mexer arrasta.
+   *
+   * O ponto não salta para debaixo do cursor — mantém a distância a que foi
+   * agarrado, senão um marcador grande dava sempre um pulo ao começar a mexer.
+   */
+  #pegar(ev, id) {
+    if (ev.button !== 0) return;
     const el = this.#elementos.get(id);
+    const podeArrastar = game.user.isGM;
+    const inicio = { x: ev.clientX, y: ev.clientY };
+    const agora = this.ecraDe(id) ?? inicio;
+    this.#arrasto = { id, inicio, mexeu: false, desvio: { x: agora.x - inicio.x, y: agora.y - inicio.y } };
+    ev.stopPropagation();
 
     const mover = (e) => {
-      const d = Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y);
-      if (d < 4) return;
-      this.#arrasto.mexeu = true;
-      el?.classList.add("poi-a-arrastar");
-      el.style.transform = `translate3d(${Math.round(e.clientX)}px, ${Math.round(e.clientY)}px, 0)`;
+      if (!podeArrastar || !this.#arrasto) return;
+      if (!this.#arrasto.mexeu && Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) < 4) return;
+      if (!this.#arrasto.mexeu) {
+        this.#arrasto.mexeu = true;
+        el?.classList.add("poi-a-arrastar");
+        Hooks.callAll(`${MODULE_ID}.arrastando`, id);
+      }
+      const x = e.clientX + this.#arrasto.desvio.x;
+      const y = e.clientY + this.#arrasto.desvio.y;
+      el.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
     };
 
     const largar = async (e) => {
       globalThis.removeEventListener("pointermove", mover);
       globalThis.removeEventListener("pointerup", largar);
       el?.classList.remove("poi-a-arrastar");
-      if (this.#arrasto?.mexeu) {
-        const cena = canvas.stage.worldTransform.applyInverse({ x: e.clientX, y: e.clientY });
-        await moverPonto(id, cena.x, cena.y);
-      }
-      // o clique dispara logo a seguir ao pointerup: só depois é que limpamos
-      setTimeout(() => (this.#arrasto = null), 0);
+      const arrasto = this.#arrasto;
+      this.#arrasto = null;
+      if (!arrasto) return;
+      if (!arrasto.mexeu) return this.alternarSelecao(id);
+      const alvo = canvas.stage.worldTransform.applyInverse({
+        x: e.clientX + arrasto.desvio.x,
+        y: e.clientY + arrasto.desvio.y
+      });
+      await moverPonto(id, alvo.x, alvo.y);
+      Hooks.callAll(`${MODULE_ID}.largou`, id);
     };
 
     globalThis.addEventListener("pointermove", mover);
     globalThis.addEventListener("pointerup", largar);
   }
 
-  // ---------------------------------------------------------------- ações rápidas
-
-  async #accaoRapida(ev, id) {
-    const botao = ev.target.closest("[data-accao]");
-    if (!botao) return;
-    ev.stopPropagation();
-    const p = obterPonto(id);
-    if (!p) return;
-
-    switch (botao.dataset.accao) {
-      case "revelarPonto":
-        await alternarOculto(id);
-        break;
-      case "revelarPista": {
-        const ev2 = proximaPorRevelar(p);
-        if (!ev2) return ui.notifications.info(game.i18n.localize("POI.Avisos.SemPistas"));
-        await revelarEvidencia(id, ev2.id);
-        Hooks.callAll(`${MODULE_ID}.revelou`, { pontoId: id, evidenciaId: ev2.id });
-        break;
-      }
-      case "esgotar":
-        await alternarEsgotado(id);
-        break;
-      case "editar":
-        Hooks.callAll(`${MODULE_ID}.editar`, id);
-        break;
-    }
-  }
-
   // ---------------------------------------------------------------- colocar
 
   /**
-   * Modo de colocação: uma folha transparente por cima de tudo apanha o clique e
-   * converte-o em coordenadas da cena. Assim não disputamos o rato com as
-   * ferramentas do próprio Foundry, que é onde estes módulos costumam partir.
+   * Modo de colocação: uma folha transparente apanha o clique e converte-o em
+   * coordenadas da cena — assim não disputamos o rato com as ferramentas do
+   * próprio Foundry, que é onde estes módulos costumam partir. Um clique em cima
+   * de um marcador é devolvido a esse marcador em vez de criar outro por cima.
    */
   modoColocar(ligado) {
     this.#colocar = ligado;
@@ -292,25 +242,17 @@ class CamadaDeMarcadores {
       if (ev.button !== 0) return;
       ev.preventDefault();
       ev.stopPropagation();
-      // um clique em cima de um marcador é para esse marcador, não para criar
-      // outro por cima: a folha sai da frente por um instante e devolve o clique
       folha.style.pointerEvents = "none";
       const porBaixo = document.elementFromPoint(ev.clientX, ev.clientY);
       folha.style.pointerEvents = "";
-      const marcador = porBaixo?.closest?.(".poi-marcador, .poi-barra");
-      if (marcador) {
-        porBaixo.closest("button")?.click();
-        return;
-      }
-      const alvo = canvas.stage.worldTransform.applyInverse({ x: ev.clientX, y: ev.clientY });
-      this.#aoColocar(alvo);
+      const alvo = porBaixo?.closest?.(".poi-alvo");
+      if (alvo) return this.#pegar(ev, alvo.closest(".poi-marcador").dataset.id);
+      if (porBaixo?.closest?.("#poi-painel")) return;
+      this.#aoColocar(canvas.stage.worldTransform.applyInverse({ x: ev.clientX, y: ev.clientY }));
     });
     paiUI().appendChild(folha);
     this.#capturador = folha;
-    log("modo de colocação ligado");
   }
-
-  get aColocar() { return this.#colocar; }
 }
 
 export const marcadores = new CamadaDeMarcadores();

@@ -1,8 +1,8 @@
 {
   "id": "tiagos-toolkit-poi",
   "title": "Tiago's Toolkit: Points of Interest",
-  "description": "Uma camada de anotação sobre a cena: o mestre marca o que há para investigar, os jogadores examinam e as descobertas ficam num dossiê. O módulo aponta para o que importa — nunca diz o que significa.",
-  "version": "0.1.1",
+  "description": "Pontos de interesse sobre o mapa: o mestre marca uma coisa na cena, dá-lhe nome e descrição, e escolhe a forma, a cor e o tamanho do marcador. Os jogadores passam o rato, clicam e leem.",
+  "version": "0.2.0",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
@@ -33,5 +33,5 @@
   "socket": true,
   "url": "https://github.com/Th1rdo/tiagos-toolkit-poi",
   "manifest": "https://github.com/Th1rdo/tiagos-toolkit-poi/releases/latest/download/module.json",
-  "download": "https://github.com/Th1rdo/tiagos-toolkit-poi/releases/download/v0.1.1/tiagos-toolkit-poi.zip"
+  "download": "https://github.com/Th1rdo/tiagos-toolkit-poi/releases/download/v0.2.0/tiagos-toolkit-poi.zip"
 }
